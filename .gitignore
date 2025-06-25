@@ -1,0 +1,14 @@
+# 1. 默认忽略所有内容
+*
+
+# 2. 但是，取消忽略以下指定的文件夹和它们里面的所有内容
+!/finetune_src/
+!/finetune_src/**
+!/LLaMA2-Accessory/
+!/LLaMA2-Accessory/**
+
+# 3. 然后，重新忽略不需要追踪的子文件夹
+/finetune_src/datasets/
+
+# 4. 最后，不要忽略 .gitignore 文件本身
+!.gitignore 

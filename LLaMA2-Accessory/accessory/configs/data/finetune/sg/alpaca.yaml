@@ -1,0 +1,4 @@
+META:
+  -
+    path: '/root/autodl-tmp/navcot/Data_prepar/Training/finetuning/R2R_train_instruction_finetuning_data.json'
+    type: 'text'

@@ -1,0 +1,70 @@
+[20:15:14.279436] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:01<00:00, 16.91it/s]
+[20:15:16.191232] Generating 1 candidates for best-of-n selection----time_step:0
+[20:15:16.191258] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror, walk through the open door and stop. Observation: [A. stop, B. go forward <a wall with a mirror>, C. turn left <a bedroom with a bed>]. History: None.
+Output: Imagination: mirror. Filtered observation: B matches the imagination. Action: B.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. go forward to<a view of a room with a desk and several chairs>', 'C. turn left to<there is an open doorway leading to a nice home>', 'D. turn right to<a view of a desk, laptop and windows>', 'E. turn left to<a bathroom doorway with glass and a light on the left>']. History: None.
+Output:  
+[20:15:16.191278] candidate_texts_by_batch[0]: [' Imagination: door. Filtered observation: C matches the imagination. Action: C.'] 
+[20:15:16.191353] a_t: [2, 1, 2, 1, 1, 1, 3, 1, 1, 1, 3, 5, 2, 3, 1, 2, 1, 3, 1, 3, 3, 1, 3, 1, 3, 2, 1, 1, 2, 7, 1, 1] 
+         no_vllm  a_t: [2, 1, 2, 1, 1, 1, 3, 1, 1, 1, 3, 5, 2, 3, 1, 2, 1, 3, 1, 3, 3, 1, 3, 1, 3, 2, 1, 3, 2, 7, 1, 1]
+
+[20:15:16.317918] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:02<00:00, 14.53it/s]
+[20:15:18.539157] Generating 1 candidates for best-of-n selection----time_step:1
+[20:15:18.539188] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror and walk through the open door. Observation: [A. stop,  B. go forward <a bedroom with a bed>, C. turn right <a open door leading to a hallway>]. History: Step 1. go forward <a wall with a mirror>.
+Output: Imagination: open door. Filtered observation: C matches the imagination. Action: C.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. turn right to<there is an office that has some chairs in it>', 'C. turn right to<a desk with some chairs near a window>', 'D. go back to<a very neat desk in an office area>', 'E. go back to<a room with bookshelves and a computer in front of a bookcase>', 'F. turn left to<a hallway with wood doors and ceiling lights>', 'G. turn left to<this is a hallway in a home that has a lot of glass>']. History: Step 1. turn left to<there is an open doorway leading to a nice home>.
+Output:  
+[20:15:18.539210] candidate_texts_by_batch[0]: [' Imagination: circular design. Filtered observation: G matches the imagination. Action: G.'] 
+[20:15:18.539306] a_t: [6, 3, 3, 2, 3, 2, 3, 2, 3, 1, 6, 4, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 1, 2, 4, 2, 1, 3, 3, 2, 2, 2] 
+
+[20:15:18.626041] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:02<00:00, 15.33it/s]
+[20:15:20.732129] Generating 1 candidates for best-of-n selection----time_step:2
+[20:15:20.732155] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror and walk through the open door. Observation: [A. stop,  B. go forward <a bedroom with a bed>, C. turn right <a open door leading to a hallway>]. History: Step 1. go forward <a wall with a mirror>.
+Output: Imagination: open door. Filtered observation: C matches the imagination. Action: C.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. go back to<the open doors lead into the living room and study area>', 'C. go back to<the open doors lead into the living room and study area>', 'D. go back to<a door that has a mirror behind it>']. History: Step 2. turn left to<this is a hallway in a home that has a lot of glass>.
+Output:  
+[20:15:20.732174] candidate_texts_by_batch[0]: [' Imagination: circular design. Filtered observation: D matches the imagination. Action: D.'] 
+[20:15:20.732255] a_t: [3, 3, 4, 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 3, 3, 3, 3, 3, 7, 3, 4, 4, 3, 1, 3, 2, 2, 2, 5] 
+
+[20:15:20.812401] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:02<00:00, 15.05it/s]
+[20:15:22.957088] Generating 1 candidates for best-of-n selection----time_step:3
+[20:15:22.957115] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror and walk through the open door. Observation: [A. stop,  B. go forward <a bedroom with a bed>, C. turn right <a open door leading to a hallway>]. History: Step 1. go forward <a wall with a mirror>.
+Output: Imagination: open door. Filtered observation: C matches the imagination. Action: C.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. go back to<a white toilet sitting under a bathroom window>', 'C. turn left to<a wooden desk sits in the middle of a room>', 'D. turn left to<a desk with a chair and lamp on top in a room>', 'E. turn right to<hallway with tiled floors, light fixture, vase and wall decor>']. History: Step 3. go back to<a door that has a mirror behind it>.
+Output:  
+[20:15:22.957135] candidate_texts_by_batch[0]: [' Imagination: circular design. Filtered observation: E matches the imagination. Action: E.'] 
+[20:15:22.957220] a_t: [4, 4, 4, 1, 3, 2, 5, 3, 2, 2, 3, 3, 7, 3, 2, 3, 2, 3, 3, 3, 3, 1, 1, 3, 3, 3, 1, 3, 3, 2, 4, 4] 
+
+[20:15:23.004696] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:02<00:00, 15.19it/s]
+[20:15:25.128793] Generating 1 candidates for best-of-n selection----time_step:4
+[20:15:25.128817] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror and walk through the open door. Observation: [A. stop,  B. go forward <a bedroom with a bed>, C. turn right <a open door leading to a hallway>]. History: Step 1. go forward <a wall with a mirror>.
+Output: Imagination: open door. Filtered observation: C matches the imagination. Action: C.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. turn right to<there is an image of the corridor in this house>', 'C. go back to<an entryway in a house with wood floors and a black wooden door>', 'D. go forward to<a long hallway with lights and an empty table>']. History: Step 4. turn right to<hallway with tiled floors, light fixture, vase and wall decor>.
+Output:  
+[20:15:25.128835] candidate_texts_by_batch[0]: [' Imagination: circular design. Filtered observation: D matches the imagination. Action: D.'] 
+[20:15:25.128922] a_t: [3, 3, 2, 3, 3, 2, 3, 6, 2, 2, 6, 2, 3, 3, 3, 2, 3, 7, 3, 3, 3, 3, 3, 2, 4, 2, 3, 4, 2, 2, 6, 3] 
+
+[20:15:25.164378] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:02<00:00, 15.76it/s]
+[20:15:27.211660] Generating 1 candidates for best-of-n selection----time_step:5
+[20:15:27.211702] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror and walk through the open door. Observation: [A. stop,  B. go forward <a bedroom with a bed>, C. turn right <a open door leading to a hallway>]. History: Step 1. go forward <a wall with a mirror>.
+Output: Imagination: open door. Filtered observation: C matches the imagination. Action: C.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. go back to<a long hallway with two benches, potted plants and an open doorway>', 'C. turn left to<a hallway with a wooden bench and pictures on the wall>', 'D. go forward to<there is a long hallway with photos on the wall>']. History: Step 5. go forward to<a long hallway with lights and an empty table>.
+Output:  
+[20:15:27.211737] candidate_texts_by_batch[0]: [' Imagination: circular design. Filtered observation: D matches the imagination. Action: D.'] 
+[20:15:27.211908] a_t: [3, 2, 3, 3, 2, 3, 5, 4, 2, 2, 3, 4, 3, 3, 2, 3, 2, 3, 3, 3, 3, 2, 1, 3, 3, 3, 3, 3, 3, 2, 3, 4] 
+
+[20:15:27.258906] Info: Using EOS token ID 2 (from .eos_token_id) for vLLM stopping.
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:02<00:00, 14.58it/s]
+[20:15:29.482655] Generating 1 candidates for best-of-n selection----time_step:6
+[20:15:29.482681] internal_prompt_by_batch[0]: Input: Instruction: walk towards the mirror and walk through the open door. Observation: [A. stop,  B. go forward <a bedroom with a bed>, C. turn right <a open door leading to a hallway>]. History: Step 1. go forward <a wall with a mirror>.
+Output: Imagination: open door. Filtered observation: C matches the imagination. Action: C.
+Input: Instruction: Enter the door to the left of the globe. Walk forward and continue down the corridor. Continue straight until you reach a circular design on the floor. Wait here. Observation: ['A. stop', 'B. go back to<the inside of a home with blue lights and white walls>', 'C. go forward to<the entrance to an empty home features many pictures>']. History: Step 6. go forward to<there is a long hallway with photos on the wall>.
+Output:  
+[20:15:29.482701] candidate_texts_by_batch[0]: [' Imagination: circular design. Filtered observation: C matches the imagination. Action: C.'] 
+[20:15:29.482782] a_t: [2, 3, 3, 3, 1, 2, 3, 3, 2, 2, 3, 4, 7, 3, 3, 5, 4, 7, 3, 3, 3, 2, 3, 3, 4, 2, 2, 2, 2, 2, 3, 3] 
