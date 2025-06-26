@@ -117,9 +117,8 @@ def parse_args():
     parser.add_argument('--best_of_n_temperature', type=float,default=0.35)
     parser.add_argument('--top_p', type=float, default=0.95)
     parser.add_argument('--candidate_cap_dir', type=str,
-                        default='/root/autodl-tmp/navcot/Data_prepar/captions')
-    # parser.add_argument('--candidate_cap_dir', type=str,
-    #                     default='/root/autodl-tmp/navcot/NavCoT/finetune_src/captions')
+                        default='/root/autodl-tmp/navcot/NavCoT/finetune_src/datasets/R2R/annotations/captions')
+
     #llama2
     parser.add_argument('--llama_type', default='llama', type=str, metavar='MODEL',
                         help='type of llama')

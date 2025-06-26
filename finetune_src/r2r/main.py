@@ -279,7 +279,8 @@ def valid(args, train_env, val_envs, rank=-1):
         # 修改这里的feedback参数，从'argmax'改为'sample'或其他有效值
         agent.test(use_dropout=False, feedback=args.feedback, iters=iters)
         # agent.test(use_dropout=False, feedback='argmax', iters=iters)
-        print(env_name, 'cost time: %.2fs' % (time.time() - start_time))
+        cost_time = time.time() - start_time
+        print(env_name, 'cost time: %.2fs' % (cost_time))
         preds = agent.get_results()
         preds = merge_dist_results(all_gather(preds))
 
@@ -293,6 +294,7 @@ def valid(args, train_env, val_envs, rank=-1):
                 loss_str = "Env name: %s" % env_name
                 for metric, val in score_summary.items():
                     loss_str += ', %s: %.2f' % (metric, val)
+                loss_str += ', cost_time: %.2fs' % (cost_time)
                 write_to_record_file(loss_str+'\n', record_file)
 
             if args.submit:

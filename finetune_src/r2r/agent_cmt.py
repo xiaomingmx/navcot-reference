@@ -96,12 +96,20 @@ class Seq2SeqCMTAgent(BaseAgent):
         if self.args.llm_predict:
             try:
                 from sentence_transformers import SentenceTransformer
-                self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
-                print("Loaded sentence-transformer model for semantic similarity")
+                # Model for SAS (Semantic Alignment Score) - Text-to-Text similarity
+                self.sas_model = SentenceTransformer('all-MiniLM-L6-v2')
+                print("Loaded 'all-MiniLM-L6-v2' for SAS (text similarity).")
+                # Model for MFS (Multimodal Fusion Score) - Text-to-Image similarity
+                self.mfs_model = SentenceTransformer('clip-ViT-B-32')
+                print("Loaded 'clip-ViT-B-32' for MFS (multimodal similarity).")
             except ImportError:
-                print("sentence-transformers not available, falling back to simple similarity")
-                self.semantic_model = None
-
+                print("Warning: sentence-transformers not available. SAS and MFS will not function correctly.")
+                self.sas_model = None
+                self.mfs_model = None
+        else:
+            # Not using LLM, keep original behavior
+            self.sas_model = None
+            self.mfs_model = None
 
         # Logs
         sys.stdout.flush()
@@ -1046,12 +1054,12 @@ class Seq2SeqCMTAgent(BaseAgent):
                 return 0.0
             
             # 1. 语义相似度评分 (替代传统关键词匹配)
-            if self.semantic_model is not None:
+            if self.sas_model is not None:
                 # 使用BERT等模型计算语义相似度
                 try:
                     # 对指令和动作文本进行编码
-                    instruction_embedding = self.semantic_model.encode(instruction, convert_to_tensor=False)
-                    action_embedding = self.semantic_model.encode(action_text, convert_to_tensor=False)
+                    instruction_embedding = self.sas_model.encode(instruction, convert_to_tensor=False)
+                    action_embedding = self.sas_model.encode(action_text, convert_to_tensor=False)
                     
                     # 计算余弦相似度
                     import torch.nn.functional as F
@@ -1151,19 +1159,21 @@ class Seq2SeqCMTAgent(BaseAgent):
 
             # --- 计算分数 ---
             sas_score = self._calculate_sas(action_text, nav_input, obs[batch_idex], t)
-            # pos_score = self._calculate_pos(current_cand_action_index, cand_inputs, obs[obs_index], obs_index, t) # 传递 obs_index
-            # mfs_score = self._calculate_mfs(current_cand_action_index, cand_inputs, obs[obs_index], obs_index, t) # 传递 obs_index
+            pos_score = self._calculate_pos(action_id, cand_inputs, obs[batch_idex], batch_idex, t)
+            mfs_score = self._calculate_mfs(action_id, cand_inputs, obs[batch_idex], batch_idex, t)
 
-            final_score = self.score_alpha * sas_score
-            #               self.score_beta * pos_score + \
-            #               self.score_gamma * mfs_score
+            final_score = self.score_alpha * sas_score + \
+                          self.score_beta * pos_score + \
+                          self.score_gamma * mfs_score
 
             # print(f"  Candidate {i}: ActionID={action_id}, Text='{action_text[:30]}...', SAS={sas_score:.2f}, POS={pos_score:.2f}, MFS={mfs_score:.2f}, Final={final_score:.2f}")
             if batch_idex == 0:
                 if i == 0:
                     print(f"batch_idex:{batch_idex}")
-                else:
-                    print(f"Candidate {i}: ActionID={action_id}, Text='{action_text}', SAS={sas_score:.2f} \n")
+                    print(f"  Instr: {obs[batch_idex]['instruction']}")
+                
+                print(f"  Cand {i}: Action='{action_text}', SAS={sas_score:.2f}, POS={pos_score:.2f}, MFS={mfs_score:.2f}, Final={final_score:.2f}")
+
             if final_score > best_score:
                 best_score = final_score
                 best_action_index_in_candidates = i
@@ -1187,46 +1197,79 @@ class Seq2SeqCMTAgent(BaseAgent):
         return {
             'action_text': cand_inputs['cand_action'][obs_index][action_index],
             'viewpoint_id': obs[obs_index]['candidate'][action_index]['viewpointId'] if action_index < len(obs[obs_index]['candidate']) else None, # Check index boundary for viewpointId
+            'distance_to_target': obs[obs_index]['candidate'][action_index]['distance_to_target'] if action_index < len(obs[obs_index]['candidate']) else None,
             # Add other relevant candidate details here
         }
 
     # Modified _calculate_pos with obs_index
     def _calculate_pos(self, candidate_action_index, cand_inputs, obs_item, obs_index, t):
         """
-        计算路径最优性 (Path Optimality Score - POS)
-        你需要在这里实现具体的计算逻辑。
-        例如：考虑候选动作对应的视图与目标的距离、与最短路径的偏差等。
+        计算路径最优性 (Path Optimality Score - POS)。
+        评估动作是否让智能体更接近目标。
         """
         candidate_info = self._get_candidate_info(candidate_action_index, cand_inputs, obs_index)
-        if candidate_info is None:
-            print(f"Warning: _calculate_pos got invalid index {candidate_action_index} for obs {obs_index}. Returning 0.")
+        if candidate_info is None or candidate_info.get('distance_to_target') is None:
             return 0.0
 
-        # Placeholder: 返回一个随机分数或固定值
-        # 简单的示例：倾向于不停止的动作 (这只是一个非常基础的例子)
-        is_stop_action = (candidate_info['action_text'] == 'stop') # More robust check for stop
-        score = 0.1 if is_stop_action else 1.0
-        # 你可以在这里访问 obs_item['distance'], obs_item['candidate'][candidate_action_index]['distance_to_target'] (如果存在) 等信息
-        print(f"Warning: _calculate_pos not implemented for action index {candidate_action_index}. Returning basic score: {score}")
-        return score # <--- 在此实现 POS 计算
+        current_distance = obs_item.get('distance', float('inf'))
+        next_distance = candidate_info['distance_to_target']
+
+        # 如果动作是停止，并且已经很接近目标了，给予高分
+        if candidate_info['action_text'] == 'stop':
+            return 1.0 if current_distance < 3.0 else 0.1
+
+        # 计算距离变化
+        distance_change = current_distance - next_distance
+
+        # 将距离变化映射到 0-1 的分数，越接近目标分数越高
+        # 使用 sigmoid 函数来平滑分数，避免极端值
+        # 这里的 scaling factor (e.g., 0.5) 可以调整以改变敏感度
+        score = 1 / (1 + math.exp(-distance_change * 0.5))
+
+        return score
 
     # Modified _calculate_mfs with obs_index
     def _calculate_mfs(self, candidate_action_index, cand_inputs, obs_item, obs_index, t):
         """
-        计算多模态融合分数 (Multimodal Fusion Score - MFS)
-        你需要在这里实现具体的计算逻辑。
-        例如：评估动作对应的视觉特征（图像、角度）与指令/历史的一致性。
-        也许可以利用模型的内部注意力或表示。
+        计算多模态融合分数 (Multimodal Fusion Score - MFS)。
+        评估导航指令与候选视觉场景的对齐程度。
         """
-        candidate_info = self._get_candidate_info(candidate_action_index, cand_inputs, obs_index)
-        if candidate_info is None:
-            print(f"Warning: _calculate_mfs got invalid index {candidate_action_index} for obs {obs_index}. Returning 0.")
-            return 0.0
+        if self.mfs_model is None:
+            return 0.0 # 如果没有加载模型，则无法计算
 
-        # Placeholder: 返回一个随机分数或固定值
-        # 你可以在这里访问 cand_inputs['cand_img_feats'][obs_index][candidate_action_index], etc.
-        print(f"Warning: _calculate_mfs not implemented for action index {candidate_action_index}. Returning 0.")
-        return 0.0 # <--- 在此实现 MFS 计算
+        candidate_info = self._get_candidate_info(candidate_action_index, cand_inputs, obs_index)
+        if candidate_info is None or candidate_info['action_text'] == 'stop':
+            return 0.5 # 停止动作给予中性分数
+
+        try:
+            # 1. 获取指令文本
+            instruction = obs_item.get('instruction', '')
+            if not instruction:
+                return 0.0
+
+            # 2. 编码指令文本
+            # 我们假设 mfs_model 是一个 CLIP 文本编码器
+            text_features = self.mfs_model.encode(instruction, convert_to_tensor=True)
+            text_features = F.normalize(text_features, p=2, dim=0)
+
+            # 3. 获取预提取的候选图像特征
+            # cand_inputs['cand_img_feats'] 维度是 (batch, max_candidates, feat_dim)
+            image_features = cand_inputs['cand_img_feats'][obs_index][candidate_action_index]
+            image_features = torch.from_numpy(image_features).to(text_features.device)
+            image_features = F.normalize(image_features, p=2, dim=0)
+            
+            # 4. 计算余弦相似度
+            # image_features 和 text_features 都应该是归一化的
+            cosine_similarity = torch.dot(text_features, image_features).item()
+
+            # 将相似度从 [-1, 1] 映射到 [0, 1]
+            score = (cosine_similarity + 1) / 2
+            
+            return score
+
+        except Exception as e:
+            print(f"Error in _calculate_mfs: {e}")
+            return 0.0
 
     def rollout_llm(self, train_ml=None, reset=True):
         """
