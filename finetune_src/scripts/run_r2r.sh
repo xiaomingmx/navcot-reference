@@ -60,7 +60,7 @@ HF_MODEL_PATH="/root/autodl-tmp/navcot/NavCoT/finetune_src/datasets/R2R/exprs/fi
 CUDA_VISIBLE_DEVICES='0' torchrun --master_port 12229 --nproc_per_node 1 r2r/main.py $flag  \
       --llm_predict --stop_first --pretrained_path /root/autodl-tmp/navcot/NavCoT/finetune_src/datasets/R2R/exprs/finetune/agent/finetuned_model-r2r/epoch1 \
       --llama_type llama_peft --llama_config='/root/autodl-tmp/navcot/Data_prepar/Training/tokenizer/code_7B_params.json' --no_visual --pretrained_type consolidated \
-      --tokenizer_path /root/autodl-tmp/navcot/Data_prepar/Training/tokenizer  --dtype fp16 \
+      --tokenizer_path /root/autodl-tmp/navcot/Data_prepar/Training/tokenizer  --dtype bf16 \
       --hf_model_path ${HF_MODEL_PATH} \
       --test --submit --use_native_best_of_n \
 

@@ -114,7 +114,7 @@ def parse_args():
     parser.add_argument('--max_seq_len', type=int, default=518)
     parser.add_argument("--stop_first", action='store_true', default=False)
     parser.add_argument('--temperature', type=float,default=0)
-    parser.add_argument('--best_of_n_temperature', type=float,default=0.35)
+    parser.add_argument('--best_of_n_temperature', type=float,default=0.50)
     parser.add_argument('--top_p', type=float, default=0.95)
     parser.add_argument('--candidate_cap_dir', type=str,
                         default='/root/autodl-tmp/navcot/NavCoT/finetune_src/datasets/R2R/annotations/captions')

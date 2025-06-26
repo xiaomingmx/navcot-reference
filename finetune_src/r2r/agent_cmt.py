@@ -256,6 +256,7 @@ class Seq2SeqCMTAgent(BaseAgent):
         if previous_angle is not None:
             batch_cand_index = []  #cand index(0, 12, 35...)
             batch_cand_action = []
+            batch_cand_vpids = []
 
         cand_lens = [len(ob['candidate']) + 1 for ob in obs]  # +1 is for the end
         max_len = max(cand_lens)
@@ -273,8 +274,8 @@ class Seq2SeqCMTAgent(BaseAgent):
                 cand_img_feats[i, j] = cc['feature'][:self.args.image_feat_size]
                 cand_ang_feats[i, j] = cc['feature'][self.args.image_feat_size:]
                 cand_nav_types[i, j] = 1
-                # cand_vpids.append(cc['viewpointId'])
                 if previous_angle is not None:
+                    cand_vpids.append(cc['viewpointId'])
                     direction = self.get_direction(cc['absolute_heading'] - previous_angle[i]['heading'],
                                                         cc['absolute_elevation'] - 0)
                     cand_index.append(cc['pointId'])
@@ -285,7 +286,7 @@ class Seq2SeqCMTAgent(BaseAgent):
                 cand_action.append('stop')
                 batch_cand_index.append(cand_index)
                 batch_cand_action.append(cand_action)
-                # batch_cand_vpids.append(cand_vpids)
+                batch_cand_vpids.append(cand_vpids)
             cand_nav_types[i, cand_lens[i]-1] = 2 # stop
 
         cand_img_feats = torch.from_numpy(cand_img_feats).cuda()
@@ -299,7 +300,7 @@ class Seq2SeqCMTAgent(BaseAgent):
                 'cand_lens':cand_lens,
                 'cand_action':batch_cand_action,
                 'cand_index':batch_cand_index,
-                # 'cand_vpids':batch_cand_vpids
+                'cand_vpids':batch_cand_vpids
             }
         else:
             return cand_img_feats, cand_ang_feats, cand_nav_types, cand_lens
@@ -347,8 +348,8 @@ class Seq2SeqCMTAgent(BaseAgent):
     def _get_ig_probs(self, obs):
         cand_lens = [len(ob['candidate']) + 1 for ob in obs]  # +1 is for the end
         max_len = max(cand_lens)
-        ig_probs = np.zeros((len(obs), max_len, self.args.ig_head), dtype=np.float_)
-        cand_nav_types = np.zeros((len(obs), max_len), dtype=np.int_)
+        ig_probs = np.zeros((len(obs), max_len, self.args.ig_head), dtype=np.float32)
+        cand_nav_types = np.zeros((len(obs), max_len), dtype=np.int32)
         for i, ob in enumerate(obs):
             for j, cc in enumerate(ob['candidate']):
                 ig_probs[i, j] = cc['ig_probs']
@@ -362,7 +363,7 @@ class Seq2SeqCMTAgent(BaseAgent):
         return ig_probs, cand_nav_types
 
     def _get_ig_target(self, obs, ended):
-        ig_target = np.zeros((len(obs), 196), dtype=np.int_)
+        ig_target = np.zeros((len(obs), 196), dtype=np.int32)
         for i, ob in enumerate(obs):
             if ended[i]:
                 ig_target[i,:] = self.args.ignoreid
@@ -380,7 +381,7 @@ class Seq2SeqCMTAgent(BaseAgent):
         return ig_target
 
     def _get_ig_probs_full(self, obs):
-        ig_probs = np.zeros((len(obs), 196, self.args.ig_head), dtype=np.float_)
+        ig_probs = np.zeros((len(obs), 196, self.args.ig_head), dtype=np.float32)
         # cand_nav_types = np.zeros((len(obs), max_len), dtype=np.int_)
         for i, ob in enumerate(obs):
             for j, cc in enumerate(ob['candidate']):
@@ -396,7 +397,7 @@ class Seq2SeqCMTAgent(BaseAgent):
         return ig_probs
 
     def _get_ig_probs_target(self, obs):
-        ig_probs = np.zeros((len(obs), self.args.ig_head), dtype=np.float_)
+        ig_probs = np.zeros((len(obs), self.args.ig_head), dtype=np.float32)
         for i, ob in enumerate(obs):
             for j, cc in enumerate(ob['candidate']):
                 if cc["viewpointId"] == ob['teacher']:
@@ -480,8 +481,8 @@ class Seq2SeqCMTAgent(BaseAgent):
         } for ob in obs]
 
         # Init the reward shaping
-        last_dist = np.zeros(batch_size, np.float_)
-        last_ndtw = np.zeros(batch_size, np.float_)
+        last_dist = np.zeros(batch_size, np.float32)
+        last_ndtw = np.zeros(batch_size, np.float32)
         for i, ob in enumerate(obs):   # The init distance from the view point to the target
             last_dist[i] = ob['distance']
             path_act = [vp[0] for vp in traj[i]['path']]
@@ -578,7 +579,7 @@ class Seq2SeqCMTAgent(BaseAgent):
                 # DDP error: RuntimeError: Expected to mark a variable ready only once.
                 # It seems that every output from DDP should be used in order to perform correctly
                 hist_img_feats, hist_pano_img_feats, hist_pano_ang_feats = self._history_variable(obs)
-                prev_act_angle = np.zeros((batch_size, self.args.angle_feat_size), np.float_)
+                prev_act_angle = np.zeros((batch_size, self.args.angle_feat_size), np.float32)
                 for i, next_id in enumerate(cpu_a_t):
                     if next_id != -1:
                         prev_act_angle[i] = obs[i]['candidate'][next_id]['feature'][-self.args.angle_feat_size:]
@@ -605,10 +606,10 @@ class Seq2SeqCMTAgent(BaseAgent):
 
             if train_rl:
                 # Calculate the mask and reward
-                dist = np.zeros(batch_size, np.float_)
-                ndtw_score = np.zeros(batch_size, np.float_)
-                reward = np.zeros(batch_size, np.float_)
-                mask = np.ones(batch_size, np.float_)
+                dist = np.zeros(batch_size, np.float32)
+                ndtw_score = np.zeros(batch_size, np.float32)
+                reward = np.zeros(batch_size, np.float32)
+                mask = np.ones(batch_size, np.float32)
                 for i, ob in enumerate(obs):
                     dist[i] = ob['distance']
                     path_act = [vp[0] for vp in traj[i]['path']]
@@ -678,7 +679,7 @@ class Seq2SeqCMTAgent(BaseAgent):
             # NOW, A2C!!!
             # Calculate the final discounted reward
             last_value__ = self.critic(last_h_).detach()        # The value esti of the last state, remove the grad for safety
-            discount_reward = np.zeros(batch_size, np.float_)  # The inital reward is zero
+            discount_reward = np.zeros(batch_size, np.float32)  # The inital reward is zero
             for i in range(batch_size):
                 if not ended[i]:        # If the action is not ended, use the value function as the last reward
                     discount_reward[i] = last_value__[i]
@@ -765,8 +766,8 @@ class Seq2SeqCMTAgent(BaseAgent):
         } for ob in obs]
 
         # Init the reward shaping
-        last_dist = np.zeros(batch_size, np.float_)
-        last_ndtw = np.zeros(batch_size, np.float_)
+        last_dist = np.zeros(batch_size, np.float32)
+        last_ndtw = np.zeros(batch_size, np.float32)
         for i, ob in enumerate(obs):  # The init distance from the view point to the target
             last_dist[i] = ob['distance']
             path_act = [vp[0] for vp in traj[i]['path']]
@@ -813,7 +814,7 @@ class Seq2SeqCMTAgent(BaseAgent):
             }
 
             if self.args.weighted_token:
-                visual_inputs['position_id'] = torch.from_numpy(np.ones((batch_size, 196), dtype=np.float_)/196).to(ob_masks.get_device())
+                visual_inputs['position_id'] = torch.from_numpy(np.ones((batch_size, 196), dtype=np.float32)/196).to(ob_masks.get_device())
 
             t_outputs = self.vln_bert(**visual_inputs)
             logit_action = t_outputs[0]
@@ -886,7 +887,7 @@ class Seq2SeqCMTAgent(BaseAgent):
                 # DDP error: RuntimeError: Expected to mark a variable ready only once.
                 # It seems that every output from DDP should be used in order to perform correctly
                 hist_img_feats, hist_pano_img_feats, hist_pano_ang_feats = self._history_variable(obs)
-                prev_act_angle = np.zeros((batch_size, self.args.angle_feat_size), np.float_)
+                prev_act_angle = np.zeros((batch_size, self.args.angle_feat_size), np.float32)
                 for i, next_id in enumerate(cpu_a_t):
                     if next_id != -1:
                         prev_act_angle[i] = obs[i]['candidate'][next_id]['feature'][-self.args.angle_feat_size:]
@@ -913,10 +914,10 @@ class Seq2SeqCMTAgent(BaseAgent):
 
             if train_rl:
                 # Calculate the mask and reward
-                dist = np.zeros(batch_size, np.float_)
-                ndtw_score = np.zeros(batch_size, np.float_)
-                reward = np.zeros(batch_size, np.float_)
-                mask = np.ones(batch_size, np.float_)
+                dist = np.zeros(batch_size, np.float32)
+                ndtw_score = np.zeros(batch_size, np.float32)
+                reward = np.zeros(batch_size, np.float32)
+                mask = np.ones(batch_size, np.float32)
                 for i, ob in enumerate(obs):
                     dist[i] = ob['distance']
                     path_act = [vp[0] for vp in traj[i]['path']]
@@ -980,7 +981,7 @@ class Seq2SeqCMTAgent(BaseAgent):
             }
 
             if self.args.weighted_token:
-                visual_inputs['position_id'] = torch.from_numpy(np.ones((batch_size, 196), dtype=np.float_)/196).to(ob_masks.get_device())
+                visual_inputs['position_id'] = torch.from_numpy(np.ones((batch_size, 196), dtype=np.float32)/196).to(ob_masks.get_device())
 
             _, last_h_, _ = self.vln_bert(**visual_inputs)
 
@@ -989,7 +990,7 @@ class Seq2SeqCMTAgent(BaseAgent):
             # NOW, A2C!!!
             # Calculate the final discounted reward
             last_value__ = self.critic(last_h_).detach()  # The value esti of the last state, remove the grad for safety
-            discount_reward = np.zeros(batch_size, np.float_)  # The inital reward is zero
+            discount_reward = np.zeros(batch_size, np.float32)  # The inital reward is zero
             for i in range(batch_size):
                 if not ended[i]:  # If the action is not ended, use the value function as the last reward
                     discount_reward[i] = last_value__[i]
@@ -1127,7 +1128,7 @@ class Seq2SeqCMTAgent(BaseAgent):
             print(f"Error in _calculate_sas: {e}")
             return 0.0
 
-    def _select_best_action(self, n_candidate_outputs, n_candidate_action_idx, batch_idex, cand_inputs, nav_input, obs, t):
+    def _select_best_action(self, n_cand_action_txt, n_candidate_action_idx, batch_idex, cand_inputs, nav_input, obs, t):
         """
         对 batch中每个样本的 N 个候选动作进行评分并选择最佳动作。
         """
@@ -1143,7 +1144,7 @@ class Seq2SeqCMTAgent(BaseAgent):
 
         for i in range(len(n_candidate_action_idx)):
             action_id = n_candidate_action_idx[i]
-            action_text = n_candidate_outputs[i] # 假设原始LLM输出文本也需要用于SAS
+            action_text = n_cand_action_txt[i]
 
             # 确保 action_id 是有效的候选动作索引 (非 ignore id)
 
@@ -1159,8 +1160,8 @@ class Seq2SeqCMTAgent(BaseAgent):
 
             # --- 计算分数 ---
             sas_score = self._calculate_sas(action_text, nav_input, obs[batch_idex], t)
-            pos_score = self._calculate_pos(action_id, cand_inputs, obs[batch_idex], batch_idex, t)
-            mfs_score = self._calculate_mfs(action_id, cand_inputs, obs[batch_idex], batch_idex, t)
+            pos_score = self._calculate_pos(action_text, cand_inputs, obs[batch_idex], batch_idex, t)
+            mfs_score = self._calculate_mfs(action_text, cand_inputs, obs[batch_idex], batch_idex, t)
 
             final_score = self.score_alpha * sas_score + \
                           self.score_beta * pos_score + \
@@ -1189,35 +1190,68 @@ class Seq2SeqCMTAgent(BaseAgent):
         return best_action_index_in_candidates
 
     # Helper function within _calculate_pos and _calculate_mfs
-    def _get_candidate_info(self, action_index, cand_inputs, obs_index):
-        """ Safely retrieves candidate information """
-        if action_index < 0 or action_index >= len(cand_inputs['cand_action'][obs_index]):
-            return None # Invalid index
-        # You might want to return more info from cand_inputs based on the index
-        return {
-            'action_text': cand_inputs['cand_action'][obs_index][action_index],
-            'viewpoint_id': obs[obs_index]['candidate'][action_index]['viewpointId'] if action_index < len(obs[obs_index]['candidate']) else None, # Check index boundary for viewpointId
-            'distance_to_target': obs[obs_index]['candidate'][action_index]['distance_to_target'] if action_index < len(obs[obs_index]['candidate']) else None,
-            # Add other relevant candidate details here
-        }
+    def _get_candidate_info(self, action_text, cand_inputs, obs_index):
+        """ Safely retrieves candidate's physical information """
+        
+        # Handle stop case, which doesn't have a vpid
+        if action_text == 'stop':
+            return { 'viewpoint_id': None, 'feature': None, 'image_path': None }
+
+        # Find the original index of this action_text in the cand_inputs
+        try:
+            original_actions = cand_inputs['cand_action'][obs_index]
+            original_index = original_actions.index(action_text)
+        except (ValueError, IndexError):
+            # The action text was not found in the original list.
+            return None
+
+        # Check if the found index is valid for vpids
+        if original_index < len(cand_inputs['cand_vpids'][obs_index]):
+            vpid = cand_inputs['cand_vpids'][obs_index][original_index]
+            
+            # For MFS, the feature is needed. It's stored as a tensor.
+            feature = cand_inputs['cand_img_feats'][obs_index][original_index].cpu().numpy()
+
+            return {
+                'viewpoint_id': vpid,
+                'feature': feature,
+                'image_path': None, # This info was never packaged
+            }
+        
+        return None
 
     # Modified _calculate_pos with obs_index
-    def _calculate_pos(self, candidate_action_index, cand_inputs, obs_item, obs_index, t):
+    def _calculate_pos(self, action_text, cand_inputs, obs_item, obs_index, t):
         """
         计算路径最优性 (Path Optimality Score - POS)。
         评估动作是否让智能体更接近目标。
         """
-        candidate_info = self._get_candidate_info(candidate_action_index, cand_inputs, obs_index)
-        if candidate_info is None or candidate_info.get('distance_to_target') is None:
+        # Handle stop action first using the passed-in action_text
+        if action_text == 'stop':
+            current_distance = obs_item.get('distance', float('inf'))
+            return 1.0 if current_distance < 3.0 else 0.1
+
+        candidate_info = self._get_candidate_info(action_text, cand_inputs, obs_index)
+
+        # Handle invalid candidates
+        if candidate_info is None or candidate_info.get('viewpoint_id') is None:
+            # print(f"action_text:{action_text}: candidate_info is None or candidate_info.get('viewpoint_id') is None")
+            return 0.0 # No score for invalid candidates, already handled stop
+
+        # Manually calculate distance to goal for the candidate
+        scan_id = obs_item['scan']
+        goal_vpid = obs_item['gt_path'][-1]
+        candidate_vpid = candidate_info['viewpoint_id']
+        
+        try:
+            next_distance = self.env.shortest_distances[scan_id][candidate_vpid][goal_vpid]
+        except KeyError as e:
+            # This might happen if the viewpoint is not in the graph, though unlikely for candidates.
+            print(f"action_text:{action_text}: Warning: KeyError in _calculate_pos  {e}")
             return 0.0
 
         current_distance = obs_item.get('distance', float('inf'))
-        next_distance = candidate_info['distance_to_target']
-
-        # 如果动作是停止，并且已经很接近目标了，给予高分
-        if candidate_info['action_text'] == 'stop':
-            return 1.0 if current_distance < 3.0 else 0.1
-
+        
         # 计算距离变化
         distance_change = current_distance - next_distance
 
@@ -1229,7 +1263,7 @@ class Seq2SeqCMTAgent(BaseAgent):
         return score
 
     # Modified _calculate_mfs with obs_index
-    def _calculate_mfs(self, candidate_action_index, cand_inputs, obs_item, obs_index, t):
+    def _calculate_mfs(self, action_text, cand_inputs, obs_item, obs_index, t):
         """
         计算多模态融合分数 (Multimodal Fusion Score - MFS)。
         评估导航指令与候选视觉场景的对齐程度。
@@ -1237,9 +1271,12 @@ class Seq2SeqCMTAgent(BaseAgent):
         if self.mfs_model is None:
             return 0.0 # 如果没有加载模型，则无法计算
 
-        candidate_info = self._get_candidate_info(candidate_action_index, cand_inputs, obs_index)
-        if candidate_info is None or candidate_info['action_text'] == 'stop':
+        if action_text == 'stop':
             return 0.5 # 停止动作给予中性分数
+
+        candidate_info = self._get_candidate_info(action_text, cand_inputs, obs_index)
+        if candidate_info is None:
+            return 0.0
 
         try:
             # 1. 获取指令文本
@@ -1253,8 +1290,14 @@ class Seq2SeqCMTAgent(BaseAgent):
             text_features = F.normalize(text_features, p=2, dim=0)
 
             # 3. 获取预提取的候选图像特征
-            # cand_inputs['cand_img_feats'] 维度是 (batch, max_candidates, feat_dim)
-            image_features = cand_inputs['cand_img_feats'][obs_index][candidate_action_index]
+            full_feature = candidate_info.get('feature')
+            if full_feature is None:
+                
+                return 0.0
+            
+            # The feature from env contains image_feat and angle_feat, slice it
+            image_features = full_feature[:self.args.image_feat_size]
+
             image_features = torch.from_numpy(image_features).to(text_features.device)
             image_features = F.normalize(image_features, p=2, dim=0)
             
@@ -1331,9 +1374,9 @@ class Seq2SeqCMTAgent(BaseAgent):
                             nav_input=nav_input
                         )
                         best_index_in_candidates = self._select_best_action(
-                            n_candidate_outputs=n_cand_action_txt,
+                            n_cand_action_txt=n_cand_action_txt,
                             n_candidate_action_idx=n_cand_action_idx,
-                            batch_idex=i, cand_inputs=cand_inputs, nav_input=nav_input, obs=obs, t=t
+                            batch_idex=i, cand_inputs=cand_inputs, nav_input=nav_input, obs=obs, t=t,
                         )
                         final_action_id = n_cand_action_idx[best_index_in_candidates] if n_cand_action_idx else -1
                         a_t.append(final_action_id)
@@ -1362,7 +1405,7 @@ class Seq2SeqCMTAgent(BaseAgent):
                         )
                         
                         best_index_in_candidates = self._select_best_action(
-                            n_candidate_outputs=n_cand_action_txt, n_candidate_action_idx=n_cand_action_idx,
+                            n_cand_action_txt=n_cand_action_txt, n_candidate_action_idx=n_cand_action_idx,
                             batch_idex=i, cand_inputs=cand_inputs, nav_input=nav_input, obs=obs, t=t
                         )
 
@@ -1483,12 +1526,13 @@ class Seq2SeqCMTAgent(BaseAgent):
             assert False
 
     def optim_step(self):
-        self.loss.backward()
+        if isinstance(self.loss, torch.Tensor):
+            self.loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(self.vln_bert.parameters(), 40.)
+            torch.nn.utils.clip_grad_norm_(self.vln_bert.parameters(), 40.)
 
-        self.vln_bert_optimizer.step()
-        self.critic_optimizer.step()
+            self.vln_bert_optimizer.step()
+            self.critic_optimizer.step()
 
     def train(self, n_iters, feedback='teacher', **kwargs):
         ''' Train for a given number of iterations '''
@@ -1522,12 +1566,13 @@ class Seq2SeqCMTAgent(BaseAgent):
             else:
                 assert False
 
-            self.loss.backward()
+            if isinstance(self.loss, torch.Tensor):
+                self.loss.backward()
 
-            torch.nn.utils.clip_grad_norm_(self.vln_bert.parameters(), 40.)
+                torch.nn.utils.clip_grad_norm_(self.vln_bert.parameters(), 40.)
 
-            self.vln_bert_optimizer.step()
-            self.critic_optimizer.step()
+                self.vln_bert_optimizer.step()
+                self.critic_optimizer.step()
 
             if self.args.aug is None:
                 print_progress(iter, n_iters+1, prefix='Progress:', suffix='Complete', bar_length=50)
