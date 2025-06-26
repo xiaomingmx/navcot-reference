@@ -54,7 +54,7 @@ class Seq2SeqCMTAgent(BaseAgent):
         self.rank = rank
 
         # Initialize scoring weight parameters
-        self.score_alpha = getattr(args, 'score_alpha', 1)  # SAS weight default 0.6
+        self.score_alpha = getattr(args, 'score_alpha', 0.6)  # SAS weight default 0.6
         self.score_beta = getattr(args, 'score_beta', 0.3)    # POS weight default 0.3
         self.score_gamma = getattr(args, 'score_gamma', 0.1)  # MFS weight default 0.1
         self.n_candidates = getattr(args, 'n_candidates', 3)  # 候选数量
@@ -1159,8 +1159,11 @@ class Seq2SeqCMTAgent(BaseAgent):
             #               self.score_gamma * mfs_score
 
             # print(f"  Candidate {i}: ActionID={action_id}, Text='{action_text[:30]}...', SAS={sas_score:.2f}, POS={pos_score:.2f}, MFS={mfs_score:.2f}, Final={final_score:.2f}")
-            
-            # print(f"  Candidate {i}: ActionID={action_id}, Text='{action_text[:30]}...', SAS={sas_score:.2f} \n")
+            if batch_idex == 0:
+                if i == 0:
+                    print(f"batch_idex:{batch_idex}")
+                else:
+                    print(f"Candidate {i}: ActionID={action_id}, Text='{action_text}', SAS={sas_score:.2f} \n")
             if final_score > best_score:
                 best_score = final_score
                 best_action_index_in_candidates = i
@@ -1567,36 +1570,54 @@ class Seq2SeqCMTAgent(BaseAgent):
         return keyword_score
 
     def _extract_action_txt_Idx(self, n_candidate_outputs, nav_input, bth_idx):
+        import re
+
         n_cand_size = len(n_candidate_outputs)
         n_cand_action_txt = []
         n_cand_action_idx = []
 
         only_options_batch = nav_input["only_options"]
+        valid_options = only_options_batch[bth_idx]
 
         for i in range(n_cand_size):
             output = n_candidate_outputs[i].strip()
-            substr = "Action: "
-            index = output.find(substr)
-            if index == -1:
-                cand_action_idx = random.randint(0, len(only_options_batch[bth_idx]) - 1)
-                n_cand_action_idx.append(cand_action_idx)
-                cand_action_txt = nav_input["only_actions"][bth_idx][cand_action_idx]
-                n_cand_action_txt.append(cand_action_txt)
-            else:
-                option = output[index+8]
+            cand_action_idx = -1
 
-                if option in only_options_batch[bth_idx]:
-                    cand_action_idx = only_options_batch[bth_idx].index(option)
-                    cand_action_txt = nav_input["only_actions"][bth_idx][cand_action_idx]
-                    n_cand_action_idx.append(cand_action_idx)
-                    n_cand_action_txt.append(cand_action_txt)
-                else:
-                    cand_action_idx = random.randint(0, len(only_options_batch[bth_idx]) - 1)
-                    cand_action_txt = nav_input["only_actions"][bth_idx][cand_action_idx]
-                    n_cand_action_idx.append(cand_action_idx)
-                    n_cand_action_txt.append(cand_action_txt)
+            # Strategy 1: Exact "Action: [Option]" match (most reliable)
+            substr = "Action:"
+            index = output.rfind(substr) # Use rfind to get the last occurrence
+            if index != -1:
+                action_part = output[index + len(substr):].strip()
+                if action_part and action_part[0] in valid_options:
+                    cand_action_idx = valid_options.index(action_part[0])
 
-        # print(f"n_cand_action_txt: {n_cand_action_txt} \n")
-        # print(f"n_cand_action_idx: {n_cand_action_idx} \n")
+            # Strategy 2: Regex search for "Action" followed by an option (more flexible)
+            if cand_action_idx == -1:
+                # This regex looks for "action" (case-insensitive) followed by whitespace/colon, then one of the valid options.
+                # It captures the option letter.
+                valid_options_str = "".join(valid_options)
+                match = re.search(r'action\s*:?\s*([%s])' % re.escape(valid_options_str), output, re.IGNORECASE)
+                if match:
+                    option = match.group(1).upper()
+                    cand_action_idx = valid_options.index(option)
+
+            # Strategy 3: Find any valid option letter mentioned in the text
+            if cand_action_idx == -1:
+                found_options = []
+                for opt in valid_options:
+                    if opt in output:
+                        found_options.append(opt)
+                # If exactly one valid option letter is found, use it.
+                if len(found_options) == 1:
+                    cand_action_idx = valid_options.index(found_options[0])
+
+            # Strategy 4: Fallback to random choice (last resort)
+            if cand_action_idx == -1:
+                cand_action_idx = random.randint(0, len(valid_options) - 1)
+                print(f"Warning: Could not parse action for output '{output[:50]}...'. Defaulting to random choice.")
+
+            n_cand_action_idx.append(cand_action_idx)
+            cand_action_txt = nav_input["only_actions"][bth_idx][cand_action_idx]
+            n_cand_action_txt.append(cand_action_txt)
 
         return n_cand_action_txt, n_cand_action_idx
